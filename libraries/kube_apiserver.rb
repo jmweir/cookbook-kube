@@ -18,14 +18,14 @@ module KubernetesCookbook
   class KubeApiserver < Chef::Resource
     resource_name :kube_apiserver
 
-    property :version, String, default: '1.7.6'
+    property :version, String, default: '1.13.3'
     property :remote, String,
       default: lazy { |r|
         'https://storage.googleapis.com/kubernetes-release' \
         "/release/v#{r.version}/bin/linux/amd64/kube-apiserver"
       }
     property :checksum, String,
-      default: '55426dc77997839ea67658ab08e5023de31b432a6a5df5d41c4f51ef0fc8485c'
+      default: 'e7cb440d591275a89470fb6551aca6151da6d18d0b88531fe583cb3ae4c59757'
     property :run_user, String, default: 'kubernetes'
     property :file_ulimit, Integer, default: 65536
 

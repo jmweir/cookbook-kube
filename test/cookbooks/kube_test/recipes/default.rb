@@ -18,6 +18,7 @@ kube_apiserver 'default' do
   service_cluster_ip_range '10.0.0.1/24'
   etcd_servers 'http://127.0.0.1:2379'
   insecure_bind_address '0.0.0.0' # for convenience
+  allow_privileged true
   action %w(create start)
 end
 
@@ -47,16 +48,17 @@ docker_service 'default' do
   iptables false
   ip_masq false
   storage_driver node['kube_test']['docker']['storage_driver']
-  install_method 'package'
-  version '17.06.1'
+  install_method 'tarball'
+  version '18.06.0'
 end # needed by kubelet_service[default]
 
 kubelet_service 'default' do
-  api_servers 'http://127.0.0.1:8080'
+  config '/var/lib/kubelet/config.yaml'
+  kubeconfig '/etc/kubernetes/kubelet.conf'
   pod_manifest_path '/etc/kubernetes/manifests'
-  pod_cidr '10.180.1.0/24'
-  cluster_dns '10.0.0.10'
+  cluster_dns '10.96.0.10'
   cluster_domain 'cluster.local'
+  fail_swap_on false
   action %w(create start)
 end
 

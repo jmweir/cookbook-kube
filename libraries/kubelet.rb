@@ -20,14 +20,14 @@ module KubernetesCookbook
   class KubeletService < Chef::Resource
     resource_name :kubelet_service
 
-    property :version, String, default: '1.7.6'
+    property :version, String, default: '1.13.3'
     property :remote, String,
       default: lazy { |r|
         'https://storage.googleapis.com/kubernetes-release' \
         "/release/v#{r.version}/bin/linux/amd64/kubelet"
       }
     property :checksum, String,
-      default: '6178cb17d3c34ebe31dfc572d17ae077ce19d2a936bbe90999bac87ebf6e06eb'
+      default: '4804852ba670da48ab45df2f8bbe43633a5f075c3c091892deb93b33ce293b36'
     property :container_runtime_service, String, default: 'docker.service'
     property :run_user, String, default: 'kubernetes'
     property :file_ulimit, Integer, default: 65536
@@ -46,12 +46,46 @@ module KubernetesCookbook
              when 'debian'
                %w(iptables iproute2 socat util-linux mount ebtables ethtool)
              when 'rhel', 'fedora', 'amazon'
-               %w(socat shadow-utils conntrack-tools ethtool)
+               %w(conntrack-tools ebtables ethtool libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue shadow-utils socat tcp_wrappers-libs)
              else
                %w()
              end
 
       package pkgs
+
+      # crictl
+
+      remote_file '/tmp/crictl-v1.13.0-linux-amd64.tar.gz' do
+        source 'https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.13.0/crictl-v1.13.0-linux-amd64.tar.gz'
+        checksum '9bdbea7a2b382494aff2ff014da328a042c5aba9096a7772e57fdf487e5a1d51'
+      end
+
+      execute 'unpack crictl' do
+        command 'tar zxf /tmp/crictl-v1.13.0-linux-amd64.tar.gz -C /usr/local/bin'        
+        not_if { ::File.exist?('/usr/local/bin/crictl') }
+      end
+
+      # cni
+
+      remote_file '/tmp/cni-plugins-amd64-v0.7.4.tgz' do
+        source 'https://github.com/containernetworking/plugins/releases/download/v0.7.4/cni-plugins-amd64-v0.7.4.tgz'
+        checksum '5f30e4c9090cbb5314452f4c2bcce48907f003b1614a7fc9615ddedbde31cf00'
+      end
+
+      directory '/opt/cni/bin' do
+        owner new_resource.run_user
+        recursive true
+      end
+
+      directory '/etc/cni/net.d' do
+        owner new_resource.run_user
+        recursive true
+      end
+
+      execute 'unpack cni' do
+        command 'tar zxf /tmp/cni-plugins-amd64-v0.7.4.tgz -C /opt/cni/bin'
+        not_if { ::File.exist?('/opt/cni/bin/ipvlan') }
+      end
     end
 
     action :start do
@@ -64,9 +98,33 @@ module KubernetesCookbook
         owner new_resource.run_user
       end
 
+      directory '/etc/kubernetes' do
+        owner new_resource.run_user
+      end
+
+      directory '/var/lib/kubelet' do
+        owner new_resource.run_user
+      end
+
       template '/etc/tmpfiles.d/kubernetes.conf' do
         source 'systemd/tmpfiles.erb'
         cookbook 'kube'
+      end
+
+      template '/etc/kubernetes/kubelet.conf' do
+        source 'kubelet/kubelet.conf'
+        cookbook 'kube'
+      end
+
+      template '/var/lib/kubelet/config.yaml' do
+        source 'kubelet/config.yaml'
+        cookbook 'kube'
+        variables(
+          cluster_dns: new_resource.cluster_dns,
+          cluster_domain: new_resource.cluster_domain,
+          pod_manifest_path: new_resource.pod_manifest_path,
+          pod_cidr: new_resource.pod_cidr
+        )
       end
 
       systemd_contents = {
@@ -168,6 +226,7 @@ module KubernetesCookbook
     property :experimental_kernel_memcg_notification
     property :experimental_mounter_path
     property :experimental_qos_reserved
+    property :fail_swap_on, default: true
     property :feature_gates
     property :file_check_frequency, default: '20s'
     property :google_json_key
@@ -189,6 +248,7 @@ module KubernetesCookbook
     property :kube_api_burst, default: 10
     property :kube_api_content_type, default: 'application/vnd.kubernetes.protobuf'
     property :kube_api_qps, default: 5
+    property :kubeconfig
     property :kube_reserved
     property :kube_reserved_cgroup
     property :kubeconfig

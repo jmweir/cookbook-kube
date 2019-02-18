@@ -54,7 +54,7 @@ describe command('kubectl get node') do
 end
 
 # busybox pod
-describe command('kubectl get pod busybox') do
+describe command('kubectl get pod busybox-default') do
   its('exit_status') { is_expected.to eq 0 }
-  its('stdout') { is_expected.to match(/busybox.*Running/) }
+  its('stdout') { is_expected.to match(/busybox-default.*Running/) }
 end
