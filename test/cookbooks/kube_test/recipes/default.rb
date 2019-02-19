@@ -18,7 +18,6 @@ kube_apiserver 'default' do
   service_cluster_ip_range '10.0.0.1/24'
   etcd_servers 'http://127.0.0.1:2379'
   insecure_bind_address '0.0.0.0' # for convenience
-  allow_privileged true
   action %w(create start)
 end
 
@@ -56,7 +55,8 @@ kubelet_service 'default' do
   config '/var/lib/kubelet/config.yaml'
   kubeconfig '/etc/kubernetes/kubelet.conf'
   pod_manifest_path '/etc/kubernetes/manifests'
-  cluster_dns '10.96.0.10'
+  pod_cidr '10.180.1.0/24'
+  cluster_dns '10.0.0.10'
   cluster_domain 'cluster.local'
   fail_swap_on false
   action %w(create start)

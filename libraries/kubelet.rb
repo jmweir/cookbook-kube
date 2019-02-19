@@ -52,40 +52,6 @@ module KubernetesCookbook
              end
 
       package pkgs
-
-      # crictl
-
-      remote_file '/tmp/crictl-v1.13.0-linux-amd64.tar.gz' do
-        source 'https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.13.0/crictl-v1.13.0-linux-amd64.tar.gz'
-        checksum '9bdbea7a2b382494aff2ff014da328a042c5aba9096a7772e57fdf487e5a1d51'
-      end
-
-      execute 'unpack crictl' do
-        command 'tar zxf /tmp/crictl-v1.13.0-linux-amd64.tar.gz -C /usr/local/bin'        
-        not_if { ::File.exist?('/usr/local/bin/crictl') }
-      end
-
-      # cni
-
-      remote_file '/tmp/cni-plugins-amd64-v0.7.4.tgz' do
-        source 'https://github.com/containernetworking/plugins/releases/download/v0.7.4/cni-plugins-amd64-v0.7.4.tgz'
-        checksum '5f30e4c9090cbb5314452f4c2bcce48907f003b1614a7fc9615ddedbde31cf00'
-      end
-
-      directory '/opt/cni/bin' do
-        owner new_resource.run_user
-        recursive true
-      end
-
-      directory '/etc/cni/net.d' do
-        owner new_resource.run_user
-        recursive true
-      end
-
-      execute 'unpack cni' do
-        command 'tar zxf /tmp/cni-plugins-amd64-v0.7.4.tgz -C /opt/cni/bin'
-        not_if { ::File.exist?('/opt/cni/bin/ipvlan') }
-      end
     end
 
     action :start do
